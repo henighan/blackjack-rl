@@ -1,8 +1,11 @@
+import time
 from random import shuffle
 import numpy as np
+import cProfile
 
 ACTIONS = ['S', 'H'] # S: stay, H: hit
-Q = 0.1*np.random.rand(20 - 4 + 1, 9, len(ACTIONS))
+Q = 0.1*np.random.rand(21 - 4 + 1, 9, len(ACTIONS))
+counter = np.zeros_like(Q)
 
 
 def initialize_deck():
@@ -85,3 +88,29 @@ def update_Q_and_counter(
         counter[agent_state][action] += 1
         Q[agent_state][action] += (G - Q[agent_state][action])/counter[agent_state][action]
     return Q, counter
+
+
+def print_stragegy_card(Q):
+    card_actions = np.array(ACTIONS)[np.argmax(Q, axis=-1)]
+    for ii, row in enumerate(card_actions):
+        agent_hand_display = str(4+ii) 
+        if ii+4 < 10:
+            agent_hand_display += ' '
+        print(agent_hand_display + ' ' + ' '.join(row))
+
+
+if __name__=='__main__':
+    toc = time.time()
+    n_episodes = int(1e7)
+    deck = initialize_deck()
+    for ii in range(n_episodes):
+        if len(deck) < 16:
+            deck = initialize_deck()
+        agent_state_action_pairs, reward, deck = play_episode(
+            deck, Q, epsilon=0.01)
+        Q, counter = update_Q_and_counter(
+            Q, counter, agent_state_action_pairs, reward, gamma=0.9)
+    print_stragegy_card(Q)
+    print('{} episodes took {} seconds'.format(
+        n_episodes, (time.time() - toc)))
+    print(np.sum(counter, axis=-1))
