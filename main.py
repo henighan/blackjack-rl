@@ -114,13 +114,14 @@ def update_Q_and_counter(
 
 def print_stragegy_card(Q):
     card_actions = np.array(ACTIONS)[np.argmax(Q, axis=-1)]
+    print('     ' + ' '.join(map(str, range(2, 11))) + 'A')
     for agent_hand, row in zip(reversed(AGENT_HANDS), reversed(card_actions)):
         print(' '.join(map(str, agent_hand)) + ' ' + ' '.join(row))
 
 
 if __name__=='__main__':
     toc = time.time()
-    n_episodes = int(1e7)
+    n_episodes = int(1e5)
     deck = initialize_deck()
     for ii in range(n_episodes):
         if len(deck) < 16:
