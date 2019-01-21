@@ -47,27 +47,70 @@ def deal(deck):
     return agent_cards, dealer_up_card, dealer_down_card, deck
 
 
-def play_agent_hand(agent_cards, dealer_up_card, Q, deck, epsilon=0.1):
-    agent_hand = cards_to_hand(agent_cards)
-    while agent_hand[1] <= 11:
-        """ It clearly makes no sense to stay if you have 11 or less """
-        agent_cards.append(deck.pop())
-        agent_hand = cards_to_hand(agent_cards)
+def monte_carlo_play_agent_hand(agent_cards, dealer_up_card, Q, deck, epsilon=0.1):
+    agent_cards, agent_hand = make_obvious_hits(agent_cards)
     agent_state_action_pairs = []
-    action = 'H'
+    action = 'NONE'
     while (action != 'S') and (agent_hand[1] <= 21):
-        agent_state = (agent_hand, dealer_up_card)
-        agent_state_index = agent_state_to_index(agent_state)
-        if np.random.rand() < epsilon:
-            action_index = np.random.randint(0, Q.shape[-1])
-        else:
-            action_index = np.argmax(Q[agent_state_index])
+        agent_state_index, action_index, action = \
+            sample_agent_state_action(
+                agent_cards, dealer_up_card, Q, epsilon=epsilon)
         agent_state_action_pairs.append((agent_state_index, action_index))
-        action = ACTIONS[action_index]
         if action == 'H':
             agent_cards.append(deck.pop())
             agent_hand = cards_to_hand(agent_cards)
     return agent_hand, agent_state_action_pairs, deck
+
+
+def sample_agent_state_action(agent_cards, dealer_up_card, Q, epsilon=0.1):
+    agent_hand = cards_to_hand(agent_cards)
+    agent_state = (agent_hand, dealer_up_card)
+    agent_state_index = agent_state_to_index(agent_state)
+    action_index = choose_epsilon_greedy_action(
+        Q, agent_state_index, epsilon=epsilon)
+    action = ACTIONS[action_index]
+    return agent_state_index, action_index, action
+
+
+def sarsa_train_episode(agent_cards, dealer_up_card, dealer_down_card, Q, deck,
+                        alpha=0.05, gamma=0.9, epsilon=0.1):
+    agent_cards, agent_hand = make_obvious_hits(agent_cards)
+    agent_state_index, action_index, action = sample_agent_state_action(
+        agent_cards, dealer_up_card, Q, epsilon=epsilon)
+    while (action != 'S') and (agent_hand[1] <= 21):
+        if action == 'H':
+            agent_cards.append(deck.pop())
+            agent_hand = cards_to_hand(agent_cards)
+        next_agent_state_index, next_action_index, next_action = \
+            sample_agent_state_action(agent_cards, dealer_up_card,
+                                      Q, epsilon=epsilon)
+        Q = sarsa_update_Q(
+            Q, agent_state_index, action_index,
+            next_agent_state_index, next_action_index, alpha=alpha,
+            gamma=gamma)
+        agent_state_index = next_agent_state_index
+        action_index, action = next_action_index, next_action
+    dealer_cards = [dealer_up_card, dealer_down_card]
+    dealer_hand, deck = play_dealer_hand(dealer_cards, deck)
+    reward = evaluate_reward(agent_hand, dealer_hand)
+    Q[agent_state_index][action_index] += alpha*(
+        reward - Q[agent_state_index][action_index])
+    return Q, reward, deck
+
+
+def make_obvious_hits(agent_cards):
+    """ It clearly makes no sense to stay if you have 11 or less """
+    agent_hand = cards_to_hand(agent_cards)
+    while agent_hand[1] <= 11:
+        agent_cards.append(deck.pop())
+        agent_hand = cards_to_hand(agent_cards)
+    return agent_cards, agent_hand
+
+
+def choose_epsilon_greedy_action(Q, agent_state_index, epsilon=0.1):
+    if np.random.rand() < epsilon:
+        return np.random.randint(0, len(ACTIONS))
+    return np.argmax(Q[agent_state_index])
 
 
 def play_dealer_hand(dealer_cards, deck):
@@ -91,17 +134,17 @@ def evaluate_reward(agent_hand, dealer_hand):
     return -1
 
 
-def play_episode(deck, Q, epsilon=0.1):
+def monte_carlo_play_episode(deck, Q, epsilon=0.1):
     agent_cards, dealer_up_card, dealer_down_card, deck = deal(deck)
     dealer_cards = [dealer_up_card, dealer_down_card]
-    agent_hand, agent_state_action_pairs, deck = play_agent_hand(
+    agent_hand, agent_state_action_pairs, deck = monte_carlo_play_agent_hand(
         agent_cards, dealer_up_card, Q, deck, epsilon=epsilon)
     dealer_hand, deck = play_dealer_hand(dealer_cards, deck)
     reward = evaluate_reward(agent_hand, dealer_hand)
     return agent_state_action_pairs, reward, deck
 
 
-def update_Q_and_counter(
+def monte_carlo_update_Q_and_counter(
         Q, counter, agent_state_action_pairs, reward, gamma=0.9):
     for ii, agent_state_action_pair in enumerate(
             reversed(agent_state_action_pairs)):
@@ -126,11 +169,10 @@ if __name__=='__main__':
     for ii in range(n_episodes):
         if len(deck) < 16:
             deck = initialize_deck()
-        agent_state_action_pairs, reward, deck = play_episode(
+        agent_state_action_pairs, reward, deck = monte_carlo_play_episode(
             deck, Q, epsilon=0.01)
-        Q, counter = update_Q_and_counter(
+        Q, counter = monte_carlo_update_Q_and_counter(
             Q, counter, agent_state_action_pairs, reward, gamma=0.9)
     print_stragegy_card(Q)
     print('{} episodes took {} seconds'.format(
         n_episodes, (time.time() - toc)))
-    # print(np.sum(counter, axis=-1))
