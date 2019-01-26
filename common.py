@@ -54,32 +54,6 @@ def sample_agent_state_action(agent_cards, dealer_up_card, Q, epsilon=0.1):
     return agent_state_index, action_index, action
 
 
-def sarsa_play_episode(agent_cards, dealer_up_card, dealer_down_card, Q, deck,
-                        alpha=0.05, gamma=0.9, epsilon=0.1):
-    agent_cards, agent_hand = make_obvious_hits(agent_cards)
-    agent_state_index, action_index, action = sample_agent_state_action(
-        agent_cards, dealer_up_card, Q, epsilon=epsilon)
-    while (action != 'S') and (agent_hand[1] <= 21):
-        if action == 'H':
-            agent_cards.append(deck.pop())
-            agent_hand = cards_to_hand(agent_cards)
-        next_agent_state_index, next_action_index, next_action = \
-            sample_agent_state_action(agent_cards, dealer_up_card,
-                                      Q, epsilon=epsilon)
-        Q = sarsa_update_Q(
-            Q, agent_state_index, action_index,
-            next_agent_state_index, next_action_index, alpha=alpha,
-            gamma=gamma)
-        agent_state_index = next_agent_state_index
-        action_index, action = next_action_index, next_action
-    dealer_cards = [dealer_up_card, dealer_down_card]
-    dealer_hand, deck = play_dealer_hand(dealer_cards, deck)
-    reward = evaluate_reward(agent_hand, dealer_hand)
-    Q[agent_state_index][action_index] += alpha*(
-        reward - Q[agent_state_index][action_index])
-    return Q, reward, deck
-
-
 def make_obvious_hits(agent_cards, deck):
     """ It clearly makes no sense to stay if you have 11 or less """
     agent_hand = cards_to_hand(agent_cards)
