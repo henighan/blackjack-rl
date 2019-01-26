@@ -18,7 +18,7 @@ def test_play_agent_hand_stay(mocker):
     with mocker.patch.object(
             common, 'agent_state_to_index', return_value=agent_state_index):
         ret_agent_hand, ret_agent_state_action_pairs, ret_deck = \
-            monte_carlo.monte_carlo_play_agent_hand(
+            monte_carlo.play_agent_hand(
                 agent_cards, dealer_up_card, Q, deck, epsilon=0)
     assert ret_agent_hand == agent_hand
     assert ret_agent_state_action_pairs, agent_state_action_pairs
@@ -42,7 +42,7 @@ def test_play_agent_hand_hit_stay(mocker):
             common, 'agent_state_to_index',
             side_effect=[first_agent_state, second_agent_state]):
         ret_agent_hand, ret_agent_state_action_pairs, ret_deck = \
-            monte_carlo.monte_carlo_play_agent_hand(
+            monte_carlo.play_agent_hand(
                 agent_cards, dealer_up_card, Q, deck, epsilon=0)
     assert ret_agent_hand == (' ', 18)
     assert ret_agent_state_action_pairs, agent_state_action_pairs
@@ -63,7 +63,7 @@ def test_play_agent_hand_hit_bust(mocker):
     with mocker.patch.object(
             common, 'agent_state_to_index', return_value=agent_state):
         ret_agent_hand, ret_agent_state_action_pairs, ret_deck = \
-            monte_carlo.monte_carlo_play_agent_hand(
+            monte_carlo.play_agent_hand(
                 agent_cards, dealer_up_card, Q, deck, epsilon=0)
     assert ret_agent_hand == (' ', 22)
     assert ret_agent_state_action_pairs, agent_state_action_pairs
@@ -81,7 +81,7 @@ def test_play_agent_hand_random_hit_bust(mocker):
     with mocker.patch.object(
             common, 'agent_state_to_index', return_value=agent_state):
         ret_agent_hand, ret_agent_state_action_pairs, ret_deck = \
-            monte_carlo.monte_carlo_play_agent_hand(
+            monte_carlo.play_agent_hand(
                 agent_cards, dealer_up_card, Q, deck, epsilon=1)
     assert ret_agent_hand == (' ', 22)
     assert ret_agent_state_action_pairs, agent_state_action_pairs
@@ -98,7 +98,7 @@ def test_play_agent_hand_random_stay(mocker):
     with mocker.patch.object(
             common, 'agent_state_to_index', return_value=agent_state):
         ret_agent_hand, ret_agent_state_action_pairs, ret_deck = \
-            monte_carlo.monte_carlo_play_agent_hand(
+            monte_carlo.play_agent_hand(
                 agent_cards, dealer_up_card, Q, deck, epsilon=1)
     assert ret_agent_hand == (' ', 20)
     assert ret_agent_state_action_pairs, agent_state_action_pairs
@@ -118,7 +118,7 @@ def test_update_Q_smoke():
     updated_Q = np.zeros([2, 2, 2])
     updated_Q[0, 0, 0] = gamma*reward
     updated_Q[1, 1, 1] = reward
-    ret_Q, ret_counter = monte_carlo.monte_carlo_update_Q_and_counter(
+    ret_Q, ret_counter = monte_carlo.update_Q_and_counter(
         Q, counter, agent_state_action_pairs, 1, gamma=gamma)
     np.testing.assert_equal(ret_counter, counter)
     np.testing.assert_equal(ret_Q, Q)
