@@ -54,15 +54,18 @@ def train(n_episodes, alpha=0.05, gamma=0.9, epsilon=0.1):
     toc = time.time()
     Q = 0.1*np.random.rand(len(common.AGENT_HANDS), 10, len(common.ACTIONS))
     deck = common.initialize_deck()
+    rewards = np.zeros(n_episodes)
     for ii in range(n_episodes):
         if len(deck) < 16:
             deck = common.initialize_deck()
         Q, reward, deck = play_episode(
             deck, Q, alpha=alpha, gamma=gamma, epsilon=epsilon)
-    common.print_stragegy_card(Q)
-    print('{} episodes took {} seconds'.format(
+        rewards[ii] = reward
+    print('SARSA training {} episodes took {} seconds'.format(
         n_episodes, (time.time() - toc)))
+    return Q, rewards
 
 
 if __name__=='__main__':
-    train(n_episodes=int(1e5), alpha=0.01, gamma=0.9, epsilon=0.1)
+    Q, rewards = train(n_episodes=int(1e5), alpha=0.01, gamma=0.9, epsilon=0.1)
+    common.print_stragegy_card(Q)

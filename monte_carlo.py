@@ -43,6 +43,7 @@ def update_Q_and_counter(
 def train(n_episodes, gamma=0.9, epsilon=0.1):
     toc = time.time()
     Q = 0.1*np.random.rand(len(common.AGENT_HANDS), 10, len(common.ACTIONS))
+    rewards = np.zeros(n_episodes)
     counter = np.zeros_like(Q)
     deck = common.initialize_deck()
     for ii in range(n_episodes):
@@ -50,12 +51,14 @@ def train(n_episodes, gamma=0.9, epsilon=0.1):
             deck = common.initialize_deck()
         agent_state_action_pairs, reward, deck = play_episode(
             deck, Q, epsilon=epsilon)
+        rewards[ii] = reward
         Q, counter = update_Q_and_counter(
             Q, counter, agent_state_action_pairs, reward, gamma=gamma)
-    common.print_stragegy_card(Q)
-    print('{} episodes took {} seconds'.format(
+    print('MONTE CARLO training {} episodes took {} seconds'.format(
         n_episodes, (time.time() - toc)))
+    return Q, rewards
 
 
 if __name__=='__main__':
-    train(n_episodes=int(1e5), gamma=0.9, epsilon=0.2)
+    Q, rewards = train(n_episodes=int(1e5), gamma=0.9, epsilon=0.2)
+    common.print_stragegy_card(Q)
