@@ -1,4 +1,6 @@
 numpy
 ipython
+jupyter
+matplotlib
 pytest
 pytest-mock

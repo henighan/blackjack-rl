@@ -1,5 +1,7 @@
 from random import shuffle
 import numpy as np
+import monte_carlo
+from collections import Counter
 
 
 ACTIONS = ['S', 'H'] # S: stay, H: hit
@@ -95,3 +97,23 @@ def print_stragegy_card(Q):
     print('     ' + ' '.join(map(str, range(2, 11))) + 'A')
     for agent_hand, row in zip(reversed(AGENT_HANDS), reversed(card_actions)):
         print(' '.join(map(str, agent_hand)) + ' ' + ' '.join(row))
+
+
+def evaluate_strategy(Q, n_episodes=1000):
+    deck = initialize_deck()
+    reward_counts = Counter()
+    for ii in range(n_episodes):
+        if len(deck) < 16:
+            deck = initialize_deck()
+        _, reward, deck = monte_carlo.play_episode(deck, Q, epsilon=0)
+        reward_counts[reward] += 1
+    reward_values = list(reward_counts.keys())
+    reward_phats = [c/n_episodes for c in reward_counts.values()]
+    estimated_mean_reward = sum(
+        reward*phat for reward, phat in zip(reward_values, reward_phats))
+    estimated_mean_variance = sum(
+        (phat/n_episodes)*(reward - estimated_mean_reward)**2
+        for reward, phat in zip(reward_values, reward_phats))
+    estimated_mean_std = np.sqrt(estimated_mean_variance)
+    ninety_five_pct_confidence_interval = 1.96*estimated_mean_std
+    return estimated_mean_reward, ninety_five_pct_confidence_interval
