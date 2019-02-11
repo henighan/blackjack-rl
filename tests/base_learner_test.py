@@ -1,11 +1,15 @@
 """ Tests for Base Learner """
+from collections import Counter
+
 import numpy as np
 
 import common
+from blackjack.learners import BaseLearner
 
 
 HIT_IND = common.ACTIONS.index('H')
 STAY_IND = common.ACTIONS.index('S')
+LEARNER_PATH = 'blackjack.learners.BaseLearner.'
 
 
 def test_initialize_deck_smoke(base_learner):
@@ -88,7 +92,7 @@ def test_deal_smoke(mocker, base_learner):
     dealer_up_card = 3
     dealer_down_card = 1
     mocker.patch(
-        'blackjack.learners.BaseLearner.initialize_deck', return_value=deck)
+        LEARNER_PATH + 'initialize_deck', return_value=deck)
     expected = (agent_cards, dealer_up_card, dealer_down_card, [])
     assert base_learner.deal(deck) == expected
 
@@ -238,7 +242,7 @@ def test_play_agent_hand_stay(mocker, base_learner):
     base_learner.Q = np.zeros([1, 1, len(common.ACTIONS)])
     base_learner.Q[:, :, STAY_IND] = 1
     agent_state_index = (0, 0)
-    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    mocker.patch(LEARNER_PATH + 'update_Q')
     with mocker.patch.object(
             base_learner, 'agent_state_to_index',
             return_value=agent_state_index):
@@ -261,7 +265,7 @@ def test_play_agent_hand_hit_stay(mocker, base_learner):
     base_learner.Q[first_agent_state][HIT_IND] = 1
     base_learner.Q[second_agent_state][STAY_IND] = 1
     deck = [2, 3]
-    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    mocker.patch(LEARNER_PATH + 'update_Q')
     with mocker.patch.object(
             base_learner, 'agent_state_to_index',
             side_effect=[first_agent_state, second_agent_state]):
@@ -282,7 +286,7 @@ def test_play_agent_hand_hit_bust(mocker, base_learner):
     base_learner.Q = np.zeros([1, 1, len(common.ACTIONS)])
     base_learner.Q[:, :, HIT_IND] = 1
     deck = [6, 6]
-    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    mocker.patch(LEARNER_PATH + 'update_Q')
     with mocker.patch.object(
             base_learner, 'agent_state_to_index', return_value=agent_state):
         ret_agent_hand, ret_deck = base_learner.play_agent_hand(
@@ -299,7 +303,7 @@ def test_play_agent_hand_random_hit_bust(mocker, base_learner):
     agent_state = (0, 0)
     base_learner.Q = np.array([0])
     deck = [6, 6]
-    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    mocker.patch(LEARNER_PATH + 'update_Q')
     mocker.patch('blackjack.learners.random.randint', return_value=HIT_IND)
     with mocker.patch.object(
             base_learner, 'agent_state_to_index', return_value=agent_state):
@@ -316,7 +320,7 @@ def test_play_agent_hand_random_stay(mocker, base_learner):
     agent_state = (0, 0)
     base_learner.Q = np.array([0])
     deck = []
-    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    mocker.patch(LEARNER_PATH + 'update_Q')
     mocker.patch('blackjack.learners.random.randint', return_value=STAY_IND)
     with mocker.patch.object(
             base_learner, 'agent_state_to_index', return_value=agent_state):
@@ -324,3 +328,118 @@ def test_play_agent_hand_random_stay(mocker, base_learner):
             agent_cards, dealer_up_card, deck, epsilon=1)
     assert ret_agent_hand == (' ', 20)
     assert ret_deck == []
+
+
+def test_play_episode_smoke(mocker, base_learner):
+    """ smoke test for play_episode """
+    deck = 'mock_deck'
+    mocker.patch(
+        LEARNER_PATH + 'deal',
+        return_value=('mock_agent_cards', 'mock_dealer_up_card',
+                      'mock_dealer_down_card', deck))
+    mocker.patch(LEARNER_PATH + 'play_agent_hand',
+                 return_value=((' ', 18), deck))
+    mocker.patch(LEARNER_PATH + 'play_dealer_hand',
+                 return_value=((' ', 18), deck))
+    ret_reward, ret_deck = base_learner.play_episode(deck)
+    assert ret_reward == 0
+    assert ret_deck == deck
+
+
+def test_evaluate_strategy_smoke(mocker, base_learner):
+    """ smoke test of evaluate_strategy """
+    mocker.patch(
+        LEARNER_PATH + 'play_episode',
+        side_effect=[(0, []), (1, [])])
+    reward_counter = Counter({0: 1, 1: 1})
+    mean_conf_mock = mocker.patch(
+        LEARNER_PATH + 'mean_and_confidence_interval_from_counts',
+        return_value=('mock_mean', 'mock_err'))
+    ret = base_learner.evaluate_strategy(n_episodes=2)
+    assert ret == ('mock_mean', 'mock_err')
+    mean_conf_mock.assert_called_once_with(reward_counter)
+
+
+def test_mean_and_confidence_interval_from_counts_smoke(mocker, base_learner):
+    """ smoke test for calculating mean and confidence interval """
+    reward_counts = Counter({0: 100, 1: 100})
+    mean = 0.5
+    variance = 0.5*(1-0.5)/200
+    var_to_err_mock = mocker.patch(
+        LEARNER_PATH + 'variance_to_confidence_interval',
+        return_value='mock_err')
+    ret_mean, ret_err = base_learner.mean_and_confidence_interval_from_counts(
+        reward_counts)
+    assert ret_mean == mean
+    var_to_err_mock.assert_called_once_with(variance)
+    assert ret_err == 'mock_err'
+
+
+def test_variance_to_confidence_interval_smoke(base_learner):
+    """ smoke test variance to confidence interval """
+    var = 1
+    assert base_learner.variance_to_confidence_interval(var) == 1.96
+
+
+def test_train_smoke(mocker, base_learner):
+    """ smoke test train """
+    base_learner.n_training_episodes = 0
+    mocker.patch(
+        LEARNER_PATH + 'play_episode', side_effect=[(0, []), (1, [])])
+    update_reward_mock = mocker.patch(LEARNER_PATH + 'update_reward_history')
+    base_learner.train(n_episodes=2)
+    assert base_learner.n_training_episodes == 2
+    update_reward_mock.assert_called_with(1)
+
+
+def test_update_reward_history_empty_window():
+    """ test update_reward_history when window is empty """
+    base_learner = BaseLearner(window_size=5)
+    base_learner.update_reward_history(1)
+    assert base_learner.reward_window == [1]
+    assert base_learner.windowed_training_rewards == []
+
+
+def test_update_reward_history_fills_window():
+    """ test update_reward_history when window is empty """
+    base_learner = BaseLearner(window_size=5)
+    for _ in range(7):
+        base_learner.update_reward_history(1)
+    assert base_learner.reward_window == [1, 1]
+    assert base_learner.windowed_training_rewards == [1]
+
+
+def test_episodes_til_next_power_of_two_smoke(base_learner):
+    """ smoke test episodes til next power of two """
+    n_episodes = 5
+    n_to_next_power_of_two = 3 # 5 + 3 = 8 = 2**3
+    ret = base_learner.episodes_til_next_power_of_two(n_episodes)
+    assert ret == n_to_next_power_of_two
+
+
+def test_episodes_til_next_power_of_two_zero(base_learner):
+    """ smoke test episodes til next power of two with zero episodes"""
+    n_episodes = 0
+    n_to_next_power_of_two = 1 # 0 + 1 = 1 = 2**0
+    ret = base_learner.episodes_til_next_power_of_two(n_episodes)
+    assert ret == n_to_next_power_of_two
+
+def test_episodes_til_next_power_of_two_one(base_learner):
+    """ smoke test episodes til next power of two with one episode """
+    n_episodes = 1
+    n_to_next_power_of_two = 1 # 1 + 1 = 2 = 2**1
+    ret = base_learner.episodes_til_next_power_of_two(n_episodes)
+    assert ret == n_to_next_power_of_two
+
+def test_train_and_evaluate_init(mocker, base_learner):
+    n_episodes = 5
+    n_evaluate_episodes = 2
+    play_episode_mock = mocker.patch(
+        LEARNER_PATH + 'play_episode', return_value=(1, []))
+    evaluate_mock = mocker.patch(
+        LEARNER_PATH + 'evaluate_strategy',
+        return_value=('mock_mean', 'mock_err'))
+    base_learner.train_and_evaluate(
+        n_episodes, n_evaluate_episodes=n_evaluate_episodes)
+    evaluate_mock.assert_called_with(n_episodes=2)
+    assert base_learner.evaluations == 3*[('mock_mean', 'mock_err')]

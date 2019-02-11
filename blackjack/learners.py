@@ -138,6 +138,7 @@ class BaseLearner():
         raise NotImplementedError(
             """Learner must implement function for updating state-action
             value function Q""")
+        pass
 
     def play_agent_hand(self, agent_cards, dealer_up_card, deck, epsilon=0.1):
         """ Play out the agent's hand, updating Q at each action """
@@ -172,7 +173,7 @@ class BaseLearner():
         deck = self.initialize_deck()
         reward_counts = Counter()
         for _ in range(n_episodes):
-            _, reward, deck = self.play_episode(deck, epsilon=0)
+            reward, deck = self.play_episode(deck, epsilon=0)
             reward_counts[reward] += 1
         return self.mean_and_confidence_interval_from_counts(reward_counts)
 
@@ -181,7 +182,7 @@ class BaseLearner():
         """ given counts of how many times each reward was received,
         estimate the mean reward and a 95% confidence interval for
         that estimated mean reward """
-        n_episodes = sum(reward_counts)
+        n_episodes = sum(reward_counts.values())
         reward_values = list(reward_counts.keys()) # reward amounts
         # estimated multinomial probabilities of getting each reward value
         reward_phats = [count/n_episodes for count in reward_counts.values()]
@@ -217,17 +218,28 @@ class BaseLearner():
         if len(self.reward_window) >= self.window_size:
             self.windowed_training_rewards.append(np.mean(self.reward_window))
             self.reward_window = []
+        return self
+
+    @staticmethod
+    def episodes_til_next_power_of_two(n_episodes):
+        """ Given the number of episodes thus far, calculate how many
+        more will get to the next power of 2 """
+        current_power = max(-1, math.floor(np.log2(n_episodes + 0.1)))
+        next_power_of_two = 2**(current_power + 1)
+        return next_power_of_two - n_episodes
 
     def train_and_evaluate(self, n_episodes, n_evaluate_episodes=1000):
         """ Train, ane evaluate stragegy every time the number of
         training episodes doubles """
         episode_counter = 0
         while episode_counter < n_episodes:
-            n_episodes_to_double_training_episodes = 2**math.ceil(
-                np.log2(self.n_training_episodes + 0.1))
+            n_til_power_two = self.episodes_til_next_power_of_two(
+                self.n_training_episodes)
             n_episodes_to_train = min(
-                n_episodes - episode_counter,
-                n_episodes_to_double_training_episodes)
+                n_episodes - episode_counter, n_til_power_two)
             self.train(n_episodes_to_train)
-            self.evaluations.append(self.evaluate_strategy(
-                n_episodes=n_evaluate_episodes))
+            episode_counter += n_episodes_to_train
+            if np.log2(self.n_training_episodes) % 1 == 0:
+                self.evaluations.append(self.evaluate_strategy(
+                    n_episodes=n_evaluate_episodes))
+        return self
