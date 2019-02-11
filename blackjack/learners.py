@@ -51,7 +51,6 @@ class BaseLearner():
         """ Deal cards """
         if len(deck) < 16:
             deck = cls.initialize_deck()
-        print(deck)
         agent_cards = [deck.pop()]
         dealer_up_card = deck.pop()
         agent_cards.append(deck.pop())

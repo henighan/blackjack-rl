@@ -202,6 +202,7 @@ def test_make_obvious_hits_no_hits(base_learner):
     assert ret_hand == agent_hand
     assert deck == []
 
+
 def test_make_obvious_hits_one_hit(base_learner):
     """ Test agent making obvious hits when it should hit one time """
     agent_cards = [5, 2]
@@ -211,6 +212,7 @@ def test_make_obvious_hits_one_hit(base_learner):
     assert ret_cards == [5, 2, 5]
     assert ret_hand == agent_hand
     assert deck == []
+
 
 def test_make_obvious_hits_two_hits(base_learner):
     """ Test agent making obvious hits when it should hit twice """
@@ -224,3 +226,101 @@ def test_make_obvious_hits_two_hits(base_learner):
     assert ret_cards == final_cards
     assert ret_hand == agent_hand
     assert deck == []
+
+
+def test_play_agent_hand_stay(mocker, base_learner):
+    """ Test playing the agents hand when the greedy action is to stay """
+    agent_cards = [10, 10]
+    agent_hand = (' ', 20)
+    dealer_up_card = 10
+    deck = [] # since we're staying, no cards should be drawn from the deck
+    # initialize Q so the highest-value action is 'Stay' for all states
+    base_learner.Q = np.zeros([1, 1, len(common.ACTIONS)])
+    base_learner.Q[:, :, STAY_IND] = 1
+    agent_state_index = (0, 0)
+    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    with mocker.patch.object(
+            base_learner, 'agent_state_to_index',
+            return_value=agent_state_index):
+        ret_agent_hand, ret_deck = base_learner.play_agent_hand(
+            agent_cards, dealer_up_card, deck, epsilon=0)
+    assert ret_agent_hand == agent_hand
+    assert ret_deck == deck
+
+
+def test_play_agent_hand_hit_stay(mocker, base_learner):
+    """ Test playing the agents hand when the greedy actions are to hit,
+    then stay. """
+    agent_cards = [10, 5]
+    dealer_up_card = 10
+    first_agent_state = (0, 0)
+    second_agent_state = (1, 1)
+    # initialize Q so the highest-value action is 'Hit' for first state,
+    # 'Stay' for second
+    base_learner.Q = np.zeros([2, 2, len(common.ACTIONS)])
+    base_learner.Q[first_agent_state][HIT_IND] = 1
+    base_learner.Q[second_agent_state][STAY_IND] = 1
+    deck = [2, 3]
+    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    with mocker.patch.object(
+            base_learner, 'agent_state_to_index',
+            side_effect=[first_agent_state, second_agent_state]):
+        ret_agent_hand, ret_deck = base_learner.play_agent_hand(
+            agent_cards, dealer_up_card, deck, epsilon=0)
+    assert ret_agent_hand == (' ', 18)
+    assert ret_deck == [2]
+
+
+def test_play_agent_hand_hit_bust(mocker, base_learner):
+    """ test play agent hand when the greedy action is to hit
+    which results in a bust """
+    agent_cards = [10, 6]
+    dealer_up_card = 10
+    agent_state = (0, 0)
+    # initialize Q so the highest-value action is 'Hit' for first state,
+    # 'Stay' for second
+    base_learner.Q = np.zeros([1, 1, len(common.ACTIONS)])
+    base_learner.Q[:, :, HIT_IND] = 1
+    deck = [6, 6]
+    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    with mocker.patch.object(
+            base_learner, 'agent_state_to_index', return_value=agent_state):
+        ret_agent_hand, ret_deck = base_learner.play_agent_hand(
+            agent_cards, dealer_up_card, deck, epsilon=0)
+    assert ret_agent_hand == (' ', 22)
+    assert ret_deck == [6]
+
+
+def test_play_agent_hand_random_hit_bust(mocker, base_learner):
+    """ test play agent hand when randomly chosen action is hit
+    that leads to a bust """
+    agent_cards = [10, 6]
+    dealer_up_card = 10
+    agent_state = (0, 0)
+    base_learner.Q = np.array([0])
+    deck = [6, 6]
+    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    mocker.patch('blackjack.learners.random.randint', return_value=HIT_IND)
+    with mocker.patch.object(
+            base_learner, 'agent_state_to_index', return_value=agent_state):
+        ret_agent_hand, ret_deck = base_learner.play_agent_hand(
+            agent_cards, dealer_up_card, deck, epsilon=1)
+    assert ret_agent_hand == (' ', 22)
+    assert ret_deck == [6]
+
+
+def test_play_agent_hand_random_stay(mocker, base_learner):
+    """ test play agent hand when randomly chosen action is stay """
+    agent_cards = [10, 10]
+    dealer_up_card = 10
+    agent_state = (0, 0)
+    base_learner.Q = np.array([0])
+    deck = []
+    mocker.patch('blackjack.learners.BaseLearner.update_Q')
+    mocker.patch('blackjack.learners.random.randint', return_value=STAY_IND)
+    with mocker.patch.object(
+            base_learner, 'agent_state_to_index', return_value=agent_state):
+        ret_agent_hand, ret_deck = base_learner.play_agent_hand(
+            agent_cards, dealer_up_card, deck, epsilon=1)
+    assert ret_agent_hand == (' ', 20)
+    assert ret_deck == []
