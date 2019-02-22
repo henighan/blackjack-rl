@@ -190,7 +190,7 @@ def test_choose_epsilon_greedy_action_random(mocker, base_learner):
     """ test choosing random action """
     agent_state_index = None
     base_learner.Q = None
-    mocker.patch('blackjack.learners.random.randint', return_value=STAY_IND)
+    mocker.patch('blackjack.learners.base.random.randint', return_value=STAY_IND)
     action_index = base_learner.choose_epsilon_greedy_action(
         agent_state_index, epsilon=1)
     assert action_index == STAY_IND
@@ -304,7 +304,7 @@ def test_play_agent_hand_random_hit_bust(mocker, base_learner):
     base_learner.Q = np.array([0])
     deck = [6, 6]
     mocker.patch(LEARNER_PATH + 'update_Q')
-    mocker.patch('blackjack.learners.random.randint', return_value=HIT_IND)
+    mocker.patch('blackjack.learners.base.random.randint', return_value=HIT_IND)
     with mocker.patch.object(
             base_learner, 'agent_state_to_index', return_value=agent_state):
         ret_agent_hand, ret_deck = base_learner.play_agent_hand(
@@ -321,7 +321,7 @@ def test_play_agent_hand_random_stay(mocker, base_learner):
     base_learner.Q = np.array([0])
     deck = []
     mocker.patch(LEARNER_PATH + 'update_Q')
-    mocker.patch('blackjack.learners.random.randint', return_value=STAY_IND)
+    mocker.patch('blackjack.learners.base.random.randint', return_value=STAY_IND)
     with mocker.patch.object(
             base_learner, 'agent_state_to_index', return_value=agent_state):
         ret_agent_hand, ret_deck = base_learner.play_agent_hand(
