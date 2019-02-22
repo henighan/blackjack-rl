@@ -138,7 +138,6 @@ class BaseLearner():
         raise NotImplementedError(
             """Learner must implement function for updating state-action
             value function Q""")
-        pass
 
     def play_agent_hand(self, agent_cards, dealer_up_card, deck, epsilon=0.1):
         """ Play out the agent's hand, updating Q at each action """
