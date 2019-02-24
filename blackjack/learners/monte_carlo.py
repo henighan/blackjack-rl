@@ -7,8 +7,8 @@ from blackjack.learners import BaseLearner
 class MonteCarlo(BaseLearner):
     """ Monte Carlo learner """
 
-    def __init__(self, epsilon=0.1, window_size=1000, gamma=0.9):
-        super().__init__(epsilon=epsilon, window_size=window_size)
+    def __init__(self, epsilon=0.1, window_size=1000, name=None, gamma=0.9):
+        super().__init__(epsilon=epsilon, window_size=window_size, name=name)
         self.gamma = gamma
         self.episode_state_action_pairs = []
         self.counter = np.zeros_like(self.Q)
