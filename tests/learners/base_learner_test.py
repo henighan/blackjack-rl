@@ -242,14 +242,14 @@ def test_play_agent_hand_stay(mocker, base_learner):
     base_learner.Q = np.zeros([1, 1, len(common.ACTIONS)])
     base_learner.Q[:, :, STAY_IND] = 1
     agent_state_index = (0, 0)
-    mocker.patch(LEARNER_PATH + 'update_Q')
-    with mocker.patch.object(
-            base_learner, 'agent_state_to_index',
-            return_value=agent_state_index):
-        ret_agent_hand, ret_deck = base_learner.play_agent_hand(
-            agent_cards, dealer_up_card, deck, epsilon=0)
+    update_Q_mock = mocker.patch.object(base_learner, 'update_Q')
+    mocker.patch.object(base_learner, 'agent_state_to_index',
+                        return_value=agent_state_index)
+    ret_agent_hand, ret_deck = base_learner.play_agent_hand(
+        agent_cards, dealer_up_card, deck, epsilon=0, train=True)
     assert ret_agent_hand == agent_hand
     assert ret_deck == deck
+    update_Q_mock.assert_called_once()
 
 
 def test_play_agent_hand_hit_stay(mocker, base_learner):
@@ -341,10 +341,41 @@ def test_play_episode_smoke(mocker, base_learner):
                  return_value=((' ', 18), deck))
     mocker.patch(LEARNER_PATH + 'play_dealer_hand',
                  return_value=((' ', 18), deck))
-    ret_reward, ret_deck = base_learner.play_episode(deck)
+    ret_reward, ret_deck = base_learner.play_episode(deck, train=False)
     assert ret_reward == 0
     assert ret_deck == deck
 
+
+def test_play_episode_train(mocker, base_learner):
+    """ test play_episode when train=True """
+    deck = 'mock_deck'
+    mocker.patch(
+        LEARNER_PATH + 'deal',
+        return_value=('mock_agent_cards', 'mock_dealer_up_card',
+                      'mock_dealer_down_card', deck))
+    mocker.patch(LEARNER_PATH + 'play_agent_hand',
+                 return_value=((' ', 18), deck))
+    mocker.patch(LEARNER_PATH + 'play_dealer_hand',
+                 return_value=((' ', 18), deck))
+    update_Q_mock = mocker.patch.object(base_learner, 'update_Q')
+    ret_reward, ret_deck = base_learner.play_episode(deck, train=True)
+    update_Q_mock.assert_called_once()
+
+
+def test_play_episode_train_false(mocker, base_learner):
+    """ test play_episode when train=False """
+    deck = 'mock_deck'
+    mocker.patch(
+        LEARNER_PATH + 'deal',
+        return_value=('mock_agent_cards', 'mock_dealer_up_card',
+                      'mock_dealer_down_card', deck))
+    mocker.patch(LEARNER_PATH + 'play_agent_hand',
+                 return_value=((' ', 18), deck))
+    mocker.patch(LEARNER_PATH + 'play_dealer_hand',
+                 return_value=((' ', 18), deck))
+    update_Q_mock = mocker.patch.object(base_learner, 'update_Q')
+    ret_reward, ret_deck = base_learner.play_episode(deck, train=False)
+    update_Q_mock.assert_not_called()
 
 def test_evaluate_strategy_smoke(mocker, base_learner):
     """ smoke test of evaluate_strategy """
@@ -356,7 +387,7 @@ def test_evaluate_strategy_smoke(mocker, base_learner):
         LEARNER_PATH + 'mean_and_confidence_interval_from_counts',
         return_value=('mock_mean', 'mock_err'))
     ret = base_learner.evaluate_strategy(n_episodes=2)
-    assert ret == ('mock_mean', 'mock_err')
+    assert ret == (0, 'mock_mean', 'mock_err')
     mean_conf_mock.assert_called_once_with(reward_counter)
 
 

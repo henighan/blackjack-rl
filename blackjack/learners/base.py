@@ -132,14 +132,14 @@ class BaseLearner():
                 reversed(AGENT_HANDS), reversed(card_actions)):
             print(' '.join(map(str, agent_hand)) + ' ' + ' '.join(row))
 
-    def update_Q(self, agent_state_index, action_index):
+    def update_Q(self, agent_state_index, action_index, reward=0):
         """ placeholder method for updating Q based on state, action,
         and observed reward """
         raise NotImplementedError(
             """Learner must implement function for updating state-action
             value function Q""")
 
-    def play_agent_hand(self, agent_cards, dealer_up_card, deck, epsilon=0.1):
+    def play_agent_hand(self, agent_cards, dealer_up_card, deck, epsilon=0.1, train=True):
         """ Play out the agent's hand, updating Q at each action """
         agent_cards, agent_hand, deck = self.make_obvious_hits(
             agent_cards, deck)
@@ -148,14 +148,15 @@ class BaseLearner():
             agent_state_index, action_index, action = \
                 self.sample_agent_state_action(
                     agent_cards, dealer_up_card, epsilon=epsilon)
-            self.update_Q(agent_state_index, action_index)
+            if train:
+                self.update_Q(agent_state_index, action_index)
             if action == 'H':
                 agent_cards.append(deck.pop())
                 agent_hand = self.cards_to_hand(agent_cards)
         return agent_hand, deck
 
 
-    def play_episode(self, deck, epsilon=0.1):
+    def play_episode(self, deck, epsilon=0.1, train=True):
         """ play out episode (ie, play out hand and see if the agent
         wins, loses, or pushes) """
         agent_cards, dealer_up_card, dealer_down_card, deck = self.deal(deck)
@@ -164,6 +165,9 @@ class BaseLearner():
             agent_cards, dealer_up_card, deck, epsilon=epsilon)
         dealer_hand, deck = self.play_dealer_hand(dealer_cards, deck)
         reward = self.evaluate_reward(agent_hand, dealer_hand)
+        if train:
+            self.update_Q(agent_state_index=None, action_index=None,
+                          reward=reward)
         return reward, deck
 
     def evaluate_strategy(self, n_episodes=1000):
@@ -172,9 +176,11 @@ class BaseLearner():
         deck = self.initialize_deck()
         reward_counts = Counter()
         for _ in range(n_episodes):
-            reward, deck = self.play_episode(deck, epsilon=0)
+            reward, deck = self.play_episode(deck, epsilon=0, train=False)
             reward_counts[reward] += 1
-        return self.mean_and_confidence_interval_from_counts(reward_counts)
+        mean, interval = self.mean_and_confidence_interval_from_counts(
+            reward_counts)
+        return (self.n_training_episodes, mean, interval)
 
     @classmethod
     def mean_and_confidence_interval_from_counts(cls, reward_counts):
