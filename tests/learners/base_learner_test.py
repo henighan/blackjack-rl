@@ -3,8 +3,8 @@ from collections import Counter
 
 import numpy as np
 
-import common
 from blackjack.learners import BaseLearner
+from blackjack import common
 
 
 HIT_IND = common.ACTIONS.index('H')
