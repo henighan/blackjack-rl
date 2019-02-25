@@ -15,11 +15,12 @@ the most clear variable name for the action-value function """
 class BaseLearner():
     """ Base learner class """
 
-    def __init__(self, epsilon=0.1, window_size=1000):
+    def __init__(self, epsilon=0.1, window_size=1000, name=None):
         self.epsilon = epsilon
+        self.window_size = window_size
+        self.name = name
         self.Q = 0.1*np.random.rand(
             len(AGENT_HANDS), 10, len(ACTIONS))
-        self.window_size = window_size
         self.reward_window = []
         self.windowed_training_rewards = []
         self.n_training_episodes = 0
