@@ -1,8 +1,7 @@
 """ Pytest conftest """
 from pytest import fixture
 
-from blackjack.learners import BaseLearner
-from blackjack.learners import MonteCarlo
+from blackjack.learners import BaseLearner, MonteCarlo, Sarsa
 
 
 @fixture()
@@ -12,3 +11,7 @@ def base_learner():
 @fixture()
 def mc_learner():
     return MonteCarlo()
+
+@fixture()
+def sarsa_learner():
+    return Sarsa()
