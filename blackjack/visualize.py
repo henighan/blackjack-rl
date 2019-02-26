@@ -5,11 +5,12 @@ from matplotlib import pyplot as plt
 from blackjack.common import ACTIONS, AGENT_HANDS
 
 
-def plot_eval_reward(learner):
+def plot_eval_reward(*args):
     """ Plot the estimated reward from evaluations with error bars """
-    n_training_episodes, mean_reward, err = zip(*learner.evaluations)
-    plt.errorbar(n_training_episodes, mean_reward, yerr=err,
-                 label=str(learner.name))
+    for learner in args:
+        n_training_episodes, mean_reward, err = zip(*learner.evaluations)
+        plt.errorbar(n_training_episodes, mean_reward, yerr=err,
+                     label=str(learner.name))
     plt.xlabel('Number of Training Episodes')
     plt.ylabel('Estimated Mean Reward')
     plt.legend()
