@@ -69,7 +69,7 @@ class BaseLearner():
     def play_dealer_hand(cls, dealer_cards, deck):
         """ Play out the dealer's hand """
         dealer_hand = cls.cards_to_hand(dealer_cards)
-        while dealer_hand[1] < 17:
+        while (dealer_hand[1] < 17) or (dealer_hand == ('A', 17)):
             dealer_cards.append(deck.pop())
             dealer_hand = cls.cards_to_hand(dealer_cards)
         return dealer_hand, deck
@@ -162,6 +162,10 @@ class BaseLearner():
         wins, loses, or pushes) """
         agent_cards, dealer_up_card, dealer_down_card, deck = self.deal(deck)
         dealer_cards = [dealer_up_card, dealer_down_card]
+        if set(dealer_cards) == {'A', 10}:
+            reward = self.evaluate_reward(self.cards_to_hand(agent_cards),
+                                          self.cards_to_hand(dealer_cards))
+            return reward, deck
         agent_hand, deck = self.play_agent_hand(
             agent_cards, dealer_up_card, deck, epsilon=epsilon)
         dealer_hand, deck = self.play_dealer_hand(dealer_cards, deck)

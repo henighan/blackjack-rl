@@ -2,3 +2,4 @@ ipython
 jupyter
 pytest
 pytest-mock
+imageio
