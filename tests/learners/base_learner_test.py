@@ -52,6 +52,14 @@ def test_cards_to_hand_two_aces_usable(base_learner):
     assert ret == agent_hand
 
 
+def test_cards_to_hand_soft_17(base_learner):
+    """ Test converting card list to 'hand' on soft 17 """
+    agent_cards = [6, 'A']
+    agent_hand = ('A', 17)
+    ret = base_learner.cards_to_hand(agent_cards)
+    assert ret == agent_hand
+
+
 def test_cards_to_hand_two_aces_unusable(base_learner):
     """ Test converting card list to 'hand' when there's two aces, and
     neither of them is usable """
@@ -99,17 +107,27 @@ def test_deal_smoke(mocker, base_learner):
 
 def test_play_dealer_hand_stay(base_learner):
     """ test play_dealer_hand when the action is STAY """
-    dealer_cards = [10, 10]
+    dealer_cards = [10, 7]
     deck = [2, 3]
-    dealer_hand = (' ', 20)
+    dealer_hand = (' ', 17)
     assert base_learner.play_dealer_hand(dealer_cards, deck) == (dealer_hand, deck)
 
 
 def test_play_dealer_hand_hit(base_learner):
     """ test play_dealer_hand when the action is HIT """
-    dealer_cards = [10, 5]
+    dealer_cards = [10, 6]
     deck = [2, 3]
-    played_dealer_hand = (' ', 18)
+    played_dealer_hand = (' ', 19)
+    played_deck = [2]
+    ret = base_learner.play_dealer_hand(dealer_cards, deck)
+    assert (played_dealer_hand, played_deck) == ret
+
+
+def test_play_dealer_hand_hit_soft_17(base_learner):
+    """ test that the dealer hits on soft 17 """
+    dealer_cards = ['A', 3, 3]
+    deck = [2, 3]
+    played_dealer_hand = ('A', 20)
     played_deck = [2]
     ret = base_learner.play_dealer_hand(dealer_cards, deck)
     assert (played_dealer_hand, played_deck) == ret
@@ -369,13 +387,35 @@ def test_play_episode_train_false(mocker, base_learner):
         LEARNER_PATH + 'deal',
         return_value=('mock_agent_cards', 'mock_dealer_up_card',
                       'mock_dealer_down_card', deck))
-    mocker.patch(LEARNER_PATH + 'play_agent_hand',
-                 return_value=((' ', 18), deck))
+    agent_mock = mocker.patch(LEARNER_PATH + 'play_agent_hand',
+                              return_value=((' ', 18), deck))
     mocker.patch(LEARNER_PATH + 'play_dealer_hand',
                  return_value=((' ', 18), deck))
     update_Q_mock = mocker.patch.object(base_learner, 'update_Q')
     ret_reward, ret_deck = base_learner.play_episode(deck, train=False)
     update_Q_mock.assert_not_called()
+    agent_mock.assert_called_once()
+
+
+def test_play_episode_dealer_has_blackjack(mocker, base_learner):
+    """ When the dealer gets blackjack on the initial deal, agent doesnt get
+    to play """
+    deck = 'mock_deck'
+    mocker.patch(
+        LEARNER_PATH + 'deal',
+        return_value=('mock_agent_cards', 'A', 10, deck))
+    mocker.patch(LEARNER_PATH + 'cards_to_hand')
+    agent_mock = mocker.patch(LEARNER_PATH + 'play_agent_hand')
+    dealer_mock = mocker.patch(LEARNER_PATH + 'play_dealer_hand')
+    eval_mock = mocker.patch(
+        LEARNER_PATH + 'evaluate_reward', return_value='reward')
+    update_Q_mock = mocker.patch.object(base_learner, 'update_Q')
+    ret_reward, ret_deck = base_learner.play_episode(deck, train=False)
+    update_Q_mock.assert_not_called
+    agent_mock.assert_not_called
+    dealer_mock.assert_not_called
+    assert ret_reward == 'reward'
+
 
 def test_evaluate_strategy_smoke(mocker, base_learner):
     """ smoke test of evaluate_strategy """

@@ -2,19 +2,22 @@
 import numpy as np
 
 from matplotlib import pyplot as plt
+import seaborn as sns
 from blackjack.common import ACTIONS, AGENT_HANDS
 
 
-def plot_eval_reward(learner):
+def plot_eval_reward(*args):
     """ Plot the estimated reward from evaluations with error bars """
-    n_training_episodes, mean_reward, err = zip(*learner.evaluations)
-    plt.errorbar(n_training_episodes, mean_reward, yerr=err,
-                 label=str(learner.name))
-    plt.xlabel('Number of Training Episodes')
-    plt.ylabel('Estimated Mean Reward')
-    plt.legend()
-    plt.gca().set_xscale('log')
-    plt.show()
+    fig, ax = plt.subplots()
+    for learner in args:
+        n_training_episodes, mean_reward, err = zip(*learner.evaluations)
+        ax.errorbar(n_training_episodes, mean_reward, yerr=err,
+                     label=str(learner.name))
+    ax.set_xlabel('Number of Training Episodes')
+    ax.set_ylabel('Estimated Mean Reward')
+    ax.legend()
+    ax.set_xscale('log')
+    return fig, ax
 
 
 def print_strategy_card(learner):
@@ -30,21 +33,18 @@ def plot_strategy_card(learner):
     """ Make a heatmap plotting the strategy card according to optimal
     strategy obtained from learner.Q, the action-value function """
     # pylint: disable=invalid-name
-    fig, ax = plt.subplots()
+    fig, axes = plt.subplots(nrows=1, ncols=2)
     Q_argmax = np.argmax(learner.Q, axis=-1)
-    ax.imshow(Q_argmax, cmap='coolwarm')
     ylabels = [' '.join(map(str, hand)) for hand in AGENT_HANDS]
     xlabels = list(map(str, range(2, 11))) + ['A']
-    ax.set_yticks(np.arange(len(ylabels)))
-    ax.set_xticks(np.arange(len(xlabels)))
-    ax.set_yticklabels(ylabels)
-    ax.set_xticklabels(xlabels)
-    ax.set_xticks(np.arange(len(xlabels)+1)-.5, minor=True)
-    ax.set_yticks(np.arange(len(ylabels)+1)-.5, minor=True)
-    ax.grid(which="minor", linestyle='-', color='k', linewidth=1)
-    for i in range(len(ylabels)):
-        for j in range(len(xlabels)):
-            ax.text(j, i, ACTIONS[Q_argmax[i, j]],
-                    ha="center", va="center", color="w")
+    annot = np.array(ACTIONS)[Q_argmax]
+    ylabels = [' '.join(map(str, hand)) for hand in AGENT_HANDS]
+    xlabels = list(map(str, range(2, 11))) + ['A']
+    sns.heatmap(Q_argmax[:10], ax=axes[0], square=True, cbar=False,
+                cmap='coolwarm', linewidth=0.05, annot=annot[:10], fmt='s',
+                xticklabels=xlabels, yticklabels=ylabels[:10])
+    sns.heatmap(Q_argmax[-10:], ax=axes[1], square=True, cbar=False,
+                cmap='coolwarm', linewidth=0.05, annot=annot[-10:], fmt='s',
+                xticklabels=xlabels, yticklabels=ylabels[-10:])
     fig.tight_layout()
-    plt.show()
+    return fig, axes
