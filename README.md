@@ -51,3 +51,11 @@ The list of cards held by the agent or dealer is converted into a tuple called t
 So a hand of one king and one seven is represented as `(' ', 17)`
 An ace plus a six is `('A', 17)`
 If we hit on the above hand and are dealt a 5, then the ace is no longer usable. So the value of the ace drops form 11 to 1 and the new hand is `(' ', 12)`
+
+
+## Pip install
+```bash
+pip install git+https://github.com/henighan/blackjack-rl
+```
+
+This has only been tested on python 3.6, no guarantees on other versions
