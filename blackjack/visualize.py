@@ -8,15 +8,16 @@ from blackjack.common import ACTIONS, AGENT_HANDS
 
 def plot_eval_reward(*args):
     """ Plot the estimated reward from evaluations with error bars """
+    fig, ax = plt.subplots()
     for learner in args:
         n_training_episodes, mean_reward, err = zip(*learner.evaluations)
-        plt.errorbar(n_training_episodes, mean_reward, yerr=err,
+        ax.errorbar(n_training_episodes, mean_reward, yerr=err,
                      label=str(learner.name))
-    plt.xlabel('Number of Training Episodes')
-    plt.ylabel('Estimated Mean Reward')
-    plt.legend()
-    plt.gca().set_xscale('log')
-    plt.show()
+    ax.set_xlabel('Number of Training Episodes')
+    ax.set_ylabel('Estimated Mean Reward')
+    ax.legend()
+    ax.set_xscale('log')
+    return fig, ax
 
 
 def print_strategy_card(learner):
